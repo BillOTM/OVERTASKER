@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OVERTASKER - Time Management Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 OVERTASKER</h1>
+            <p>Your Personal Time Management & Productivity Dashboard</p>
+        </div>
+
+        <div class="dashboard">
+            <!-- Task Management Card -->
+            <div class="card">
+                <h2>📝 Task Manager</h2>
+                <div class="task-input">
+                    <input type="text" id="taskInput" placeholder="Enter a new task..." maxlength="100">
+                    <button class="btn" onclick="addTask()">Add Task</button>
+                </div>
+                <div class="task-list" id="taskList">
+                    <div class="empty-state">No tasks yet. Add one above!</div>
+                </div>
+            </div>
+
+            <!-- Pomodoro Timer Card -->
+            <div class="card">
+                <h2>🍅 Pomodoro Timer</h2>
+                <div class="timer-display">
+                    <div class="time" id="timerDisplay">25:00</div>
+                    <div>Focus Session</div>
+                </div>
+                <div class="timer-controls">
+                    <button class="btn" onclick="startTimer()">Start</button>
+                    <button class="btn" onclick="pauseTimer()">Pause</button>
+                    <button class="btn" onclick="resetTimer()">Reset</button>
+                </div>
+            </div>
+
+            <!-- Analytics Card -->
+            <div class="card">
+                <h2>📊 Productivity Analytics</h2>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-value" id="tasksCompleted">0</div>
+                        <div class="stat-label">Tasks Completed</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="pomodoroSessions">0</div>
+                        <div class="stat-label">Focus Sessions</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="totalTime">0h</div>
+                        <div class="stat-label">Focus Time</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="todayTasks">0</div>
+                        <div class="stat-label">Today's Tasks</div>
+                    </div>
+                </div>
+                <div>
+                    <div>Daily Progress</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="dailyProgress" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Gamification Card -->
+            <div class="card">
+                <h2>🎮 Motivation & Rewards</h2>
+                <div class="streak-display">
+                    <div>🔥 Current Streak</div>
+                    <div class="streak-number" id="currentStreak">0</div>
+                    <div>days</div>
+                </div>
+                <div style="margin-top: 20px;">
+                    <h3>🏆 Achievements</h3>
+                    <div id="achievements">
+                        <div style="padding: 10px; background: #f0f0f0; border-radius: 5px; margin: 5px 0;">
+                            Complete your first task to unlock achievements!
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
+
