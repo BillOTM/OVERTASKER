@@ -1,252 +1,323 @@
-// Application State
-let tasks = [];
-let timer = {
-    minutes: 25,
-    seconds: 0,
-    isRunning: false,
-    interval: null
-};
-let stats = {
-    tasksCompleted: 0,
-    pomodoroSessions: 0,
-    totalFocusTime: 0,
-    todayTasks: 0,
-    currentStreak: 0,
-    lastActiveDate: null
-};
+document.addEventListener('DOMContentLoaded', () => {
+    // --- LOGIN AND UI SETUP ---
+    const loginForm = document.getElementById('login-form');
+    const loginContainer = document.getElementById('login-container');
+    const appContainer = document.getElementById('app-container');
+    const aboutBtn = document.getElementById('about-toggle-btn');
+    const aboutSection = document.getElementById('about-section');
+    const darkToggle = document.getElementById('darkToggle');
 
-// Load data from localStorage on page load
-window.onload = function() {
-    loadData();
-    updateUI();
-    updateStreak();
-};
+    // Login functionality
+    loginForm.addEventListener('submit', (e) => {
+        e.preventDefault(); // Prevent actual form submission
+        loginContainer.style.display = 'none';
+        appContainer.style.display = 'block';
+        // Initialize app state after login
+        initialize();
+    });
 
-// Task Management Functions
-function addTask() {
-    const input = document.getElementById('taskInput');
-    const taskText = input.value.trim();
+    // About section toggle
+    aboutBtn.addEventListener('click', () => {
+        const isVisible = aboutSection.style.display === 'block';
+        aboutSection.style.display = isVisible ? 'none' : 'block';
+    });
     
-    if (taskText === '') {
-        alert('Please enter a task!');
-        return;
-    }
-
-    const task = {
-        id: Date.now(),
-        text: taskText,
-        completed: false,
-        createdAt: new Date().toDateString()
+    // --- APP STATE AND DATA ---
+    let tasks = [];
+    let stats = {
+        tasksCompleted: 0,
+        pomodoroSessions: 0,
+        totalFocusTime: 0,
+        todayTasks: 0,
+        currentStreak: 0,
+        lastActiveDate: null
     };
+    let timer = { minutes: 25, seconds: 0, isRunning: false, interval: null };
 
-    tasks.push(task);
-    input.value = '';
-    
-    if (task.createdAt === new Date().toDateString()) {
-        stats.todayTasks++;
-    }
-    
-    saveData();
-    updateTaskList();
-    updateStats();
-}
+    // --- GLOBAL FUNCTIONS ---
+    // Make functions globally accessible for onclick handlers in HTML
+    window.addTask = addTask;
+    window.toggleTask = toggleTask;
+    window.deleteTask = deleteTask;
+    window.editTask = editTask;
+    window.startTimer = startTimer;
+    window.pauseTimer = pauseTimer;
+    window.resetTimer = resetTimer;
 
-function toggleTask(id) {
-    const task = tasks.find(t => t.id === id);
-    if (task) {
-        task.completed = !task.completed;
-        if (task.completed) {
-            stats.tasksCompleted++;
-            showAchievement("Task completed! 🎉");
-        } else {
-            stats.tasksCompleted--;
+    // --- INITIALIZATION ---
+    function initialize() {
+        updateUI();
+        updateStreak();
+        
+        if ('ontouchstart' in window) {
+            document.body.classList.add('touch-device');
         }
-        saveData();
-        updateTaskList();
-        updateStats();
+        
+        // Welcome message on first load
+        setTimeout(() => {
+            if (tasks.length === 0 && stats.tasksCompleted === 0) {
+                showAchievement("👋 Welcome to OVERTASKER! Start by adding your first task.");
+            }
+        }, 1000);
     }
-}
-
-function deleteTask(id) {
-    const taskIndex = tasks.findIndex(t => t.id === id);
-    if (taskIndex > -1) {
-        const task = tasks[taskIndex];
-        if (task.completed) {
-            stats.tasksCompleted--;
-        }
-        if (task.createdAt === new Date().toDateString()) {
-            stats.todayTasks--;
-        }
-        tasks.splice(taskIndex, 1);
-        saveData();
-        updateTaskList();
-        updateStats();
-    }
-}
-
-function updateTaskList() {
-    const taskList = document.getElementById('taskList');
     
-    if (tasks.length === 0) {
-        taskList.innerHTML = '<div class="empty-state">No tasks yet. Add one above!</div>';
-        return;
-    }
-
-    taskList.innerHTML = tasks.map(task => `
-        <div class="task-item ${task.completed ? 'completed' : ''}">
-            <span>${task.text}</span>
-            <div class="task-controls">
-                <button class="btn btn-small btn-complete" onclick="toggleTask(${task.id})">
-                    ${task.completed ? '↩️' : '✅'}
-                </button>
-                <button class="btn btn-small btn-delete" onclick="deleteTask(${task.id})">🗑️</button>
-            </div>
-        </div>
-    `).join('');
-}
-
-// Pomodoro Timer Functions
-function startTimer() {
-    if (!timer.isRunning) {
-        timer.isRunning = true;
-        timer.interval = setInterval(updateTimer, 1000);
-    }
-}
-
-function pauseTimer() {
-    timer.isRunning = false;
-    if (timer.interval) {
-        clearInterval(timer.interval);
-    }
-}
-
-function resetTimer() {
-    pauseTimer();
-    timer.minutes = 25;
-    timer.seconds = 0;
-    updateTimerDisplay();
-}
-
-function updateTimer() {
-    if (timer.seconds === 0) {
-        if (timer.minutes === 0) {
-            // Timer completed
-            pauseTimer();
-            stats.pomodoroSessions++;
-            stats.totalFocusTime += 25;
-            alert('🎉 Pomodoro session completed! Great job!');
-            showAchievement("Focus session completed! 🍅");
-            resetTimer();
-            saveData();
-            updateStats();
+    // --- TASK MANAGEMENT ---
+    function addTask() {
+        const input = document.getElementById("taskInput");
+        const text = input.value.trim();
+        if (!text) {
+            input.style.borderColor = '#f5576c';
+            setTimeout(() => input.style.borderColor = '', 2000);
             return;
         }
-        timer.minutes--;
-        timer.seconds = 59;
-    } else {
-        timer.seconds--;
-    }
-    updateTimerDisplay();
-}
-
-function updateTimerDisplay() {
-    const display = document.getElementById('timerDisplay');
-    const minutes = timer.minutes.toString().padStart(2, '0');
-    const seconds = timer.seconds.toString().padStart(2, '0');
-    display.textContent = `${minutes}:${seconds}`;
-}
-
-// Statistics Functions
-function updateStats() {
-    document.getElementById('tasksCompleted').textContent = stats.tasksCompleted;
-    document.getElementById('pomodoroSessions').textContent = stats.pomodoroSessions;
-    document.getElementById('totalTime').textContent = Math.floor(stats.totalFocusTime / 60) + 'h';
-    document.getElementById('todayTasks').textContent = stats.todayTasks;
-    document.getElementById('currentStreak').textContent = stats.currentStreak;
-
-    // Update daily progress (based on tasks completed today)
-    const dailyGoal = 5; // 5 tasks per day goal
-    const progress = Math.min((stats.todayTasks / dailyGoal) * 100, 100);
-    document.getElementById('dailyProgress').style.width = progress + '%';
-}
-
-// Streak Management
-function updateStreak() {
-    const today = new Date().toDateString();
-    const yesterday = new Date(Date.now() - 86400000).toDateString();
-
-    if (stats.lastActiveDate === today) {
-        // Already updated today
-        return;
-    } else if (stats.lastActiveDate === yesterday) {
-        // Continue streak
-        stats.currentStreak++;
-    } else if (stats.lastActiveDate === null) {
-        // First time
-        stats.currentStreak = 1;
-    } else {
-        // Streak broken
-        stats.currentStreak = 1;
-    }
-
-    stats.lastActiveDate = today;
-    saveData();
-    updateStats();
-}
-
-// Achievement System
-function showAchievement(message) {
-    const achievementsDiv = document.getElementById('achievements');
-    const achievement = document.createElement('div');
-    achievement.style.cssText = 'padding: 10px; background: #d4edda; border-radius: 5px; margin: 5px 0; border-left: 4px solid #28a745;';
-    achievement.textContent = message;
-    achievementsDiv.appendChild(achievement);
-    
-    // Remove achievement after 5 seconds
-    setTimeout(() => {
-        if (achievement.parentNode) {
-            achievement.parentNode.removeChild(achievement);
-        }
-    }, 5000);
-}
-
-// Data Persistence
-function saveData() {
-    const data = {
-        tasks: tasks,
-        stats: stats
-    };
-    // Using variables instead of localStorage as per requirements
-    window.appData = data;
-}
-
-function loadData() {
-    if (window.appData) {
-        const data = window.appData;
-        tasks = data.tasks || [];
-        stats = data.stats || {
-            tasksCompleted: 0,
-            pomodoroSessions: 0,
-            totalFocusTime: 0,
-            todayTasks: 0,
-            currentStreak: 0,
-            lastActiveDate: null
+        
+        const task = { 
+            id: Date.now(), 
+            text, 
+            completed: false, 
+            createdAt: new Date().toDateString() 
         };
+        tasks.push(task);
+        stats.todayTasks++;
+        input.value = "";
+        
+        updateTaskList();
+        updateStats();
+        
+        input.style.borderColor = '#43e97b';
+        setTimeout(() => input.style.borderColor = '', 1000);
     }
-}
 
-function updateUI() {
-    updateTaskList();
-    updateStats();
-    updateTimerDisplay();
-}
+    function toggleTask(id) {
+        const task = tasks.find(t => t.id === id);
+        if (task) {
+            task.completed = !task.completed;
+            stats.tasksCompleted += task.completed ? 1 : -1;
+            if (task.completed) {
+                showAchievement("✅ Great job! Task completed!");
+                const taskElement = document.querySelector(`[data-task-id="${id}"]`);
+                if (taskElement) {
+                    taskElement.style.transform = 'scale(1.05)';
+                    setTimeout(() => taskElement.style.transform = '', 300);
+                }
+            }
+            updateTaskList();
+            updateStats();
+        }
+    }
 
-// Allow Enter key to add tasks
-document.addEventListener('DOMContentLoaded', function() {
-    document.getElementById('taskInput').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
+    function deleteTask(id) {
+        const taskIndex = tasks.findIndex(t => t.id === id);
+        if (taskIndex > -1) {
+            const task = tasks[taskIndex];
+            if (task.completed) stats.tasksCompleted--;
+            if (task.createdAt === new Date().toDateString()) stats.todayTasks--;
+            tasks.splice(taskIndex, 1);
+            updateTaskList();
+            updateStats();
+        }
+    }
+
+    function editTask(id, newText) {
+        const task = tasks.find(t => t.id === id);
+        if (task && newText.trim()) {
+            task.text = newText.trim();
+        }
+    }
+
+    function updateTaskList() {
+        const container = document.getElementById("taskList");
+        if (tasks.length === 0) {
+            container.innerHTML = `<div class="empty-state">Ready to boost your productivity? Add your first task above! 🚀</div>`;
+            return;
+        }
+        
+        container.innerHTML = tasks.map(task => `
+            <div class="task-item ${task.completed ? "completed" : ""}" data-task-id="${task.id}">
+            <span contenteditable="true" onblur="editTask(${task.id}, this.textContent)">${task.text}</span>
+            <div class="task-controls">
+                <button class="btn btn-small btn-success" onclick="toggleTask(${task.id})" title="${task.completed ? 'Mark incomplete' : 'Mark complete'}">
+                ${task.completed ? '↩️' : '✅'}
+                </button>
+                <button class="btn btn-small btn-danger" onclick="deleteTask(${task.id})" title="Delete task">
+                🗑️
+                </button>
+            </div>
+            </div>`).join('');
+    }
+
+    // --- TIMER FUNCTIONALITY ---
+    function updateTimerDisplay() {
+        const m = String(timer.minutes).padStart(2, "0");
+        const s = String(timer.seconds).padStart(2, "0");
+        document.getElementById("timerDisplay").textContent = `${m}:${s}`;
+    }
+
+    function startTimer() {
+        if (!timer.isRunning) {
+            timer.isRunning = true;
+            timer.interval = setInterval(updateTimer, 1000);
+        }
+    }
+
+    function pauseTimer() {
+        timer.isRunning = false;
+        clearInterval(timer.interval);
+    }
+
+    function resetTimer() {
+        pauseTimer();
+        timer.minutes = 25;
+        timer.seconds = 0;
+        updateTimerDisplay();
+    }
+
+    function updateTimer() {
+        if (timer.seconds === 0) {
+            if (timer.minutes === 0) {
+                pauseTimer();
+                stats.pomodoroSessions++;
+                stats.totalFocusTime += 25;
+                showAchievement("🍅 Fantastic! Pomodoro session completed!");
+                
+                const timerDisplay = document.getElementById("timerDisplay");
+                timerDisplay.style.transform = 'scale(1.1)';
+                timerDisplay.style.color = '#43e97b';
+                setTimeout(() => {
+                    timerDisplay.style.transform = '';
+                    timerDisplay.style.color = '';
+                }, 1000);
+                
+                resetTimer();
+                updateStats();
+                return;
+            }
+            timer.minutes--;
+            timer.seconds = 59;
+        } else {
+            timer.seconds--;
+        }
+        updateTimerDisplay();
+    }
+
+    // --- STATISTICS AND GAMIFICATION ---
+    function updateStats() {
+        document.getElementById("tasksCompleted").textContent = stats.tasksCompleted;
+        document.getElementById("pomodoroSessions").textContent = stats.pomodoroSessions;
+        document.getElementById("totalTime").textContent = Math.floor(stats.totalFocusTime / 60) + "h";
+        document.getElementById("todayTasks").textContent = stats.todayTasks;
+        document.getElementById("currentStreak").textContent = stats.currentStreak;
+        
+        const totalTasks = tasks.length;
+        const completedTasks = tasks.filter(t => t.completed).length;
+        const progressPercent = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
+        const progressFill = document.getElementById("dailyProgress");
+        const progressLabel = document.getElementById("progressPercent");
+        
+        progressFill.style.width = progressPercent + "%";
+        progressLabel.textContent = Math.round(progressPercent) + "%";
+        
+        if (progressPercent >= 100) {
+            progressFill.style.background = 'var(--warning-gradient)';
+            if (totalTasks > 0) {
+                showAchievement("🎯 Daily goal achieved! You're on fire!");
+            }
+        } else if (progressPercent >= 60) {
+            progressFill.style.background = 'var(--success-gradient)';
+        } else {
+            progressFill.style.background = 'var(--primary-gradient)';
+        }
+    }
+
+    function updateStreak() {
+        const today = new Date().toDateString();
+        const yesterday = new Date(Date.now() - 86400000).toDateString();
+        
+        if (stats.lastActiveDate === today) return;
+        
+        if (stats.lastActiveDate === yesterday) {
+            stats.currentStreak++;
+            if (stats.currentStreak > 1) {
+                showAchievement(`🔥 ${stats.currentStreak} day streak! Keep it up!`);
+            }
+        } else {
+            stats.currentStreak = 1;
+        }
+        
+        stats.lastActiveDate = today;
+        updateStats();
+    }
+
+    function showAchievement(message) {
+        const achievementsContainer = document.getElementById("achievements");
+        const achievementElement = document.createElement("div");
+        achievementElement.className = "achievement-note";
+        achievementElement.textContent = message;
+        
+        const placeholder = achievementsContainer.querySelector('.achievement-note');
+        if (placeholder && placeholder.textContent.includes('Complete your first task')) {
+            placeholder.remove();
+        }
+        
+        achievementsContainer.insertBefore(achievementElement, achievementsContainer.firstChild);
+        
+        setTimeout(() => {
+            if (achievementElement.parentNode) {
+                achievementElement.style.opacity = '0';
+                achievementElement.style.transform = 'translateX(-100%)';
+                setTimeout(() => achievementElement.remove(), 300);
+            }
+        }, 5000);
+        
+        const achievements = achievementsContainer.querySelectorAll('.achievement-note');
+        if (achievements.length > 5) {
+            achievements[achievements.length - 1].remove();
+        }
+    }
+
+    function updateUI() {
+        updateTaskList();
+        updateStats();
+        updateTimerDisplay();
+    }
+
+    // --- EVENT LISTENERS ---
+    darkToggle.addEventListener("click", () => {
+        document.body.classList.toggle("dark");
+        const isDark = document.body.classList.contains("dark");
+        darkToggle.textContent = isDark ? "☀️" : "🌙";
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && document.activeElement.id === 'taskInput') {
             addTask();
+        }
+        
+        if (e.key === ' ' && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'SPAN') {
+            e.preventDefault();
+            if (timer.isRunning) {
+                pauseTimer();
+            } else {
+                startTimer();
+            }
+        }
+        
+        if (e.key === 'Escape') {
+            resetTimer();
+        }
+    });
+
+    document.addEventListener('touchstart', (e) => {
+        if (e.target.classList.contains('btn')) {
+            e.target.style.transform = 'scale(0.95)';
+        }
+    });
+
+    document.addEventListener('touchend', (e) => {
+        if (e.target.classList.contains('btn')) {
+            setTimeout(() => {
+                e.target.style.transform = '';
+            }, 100);
         }
     });
 });
-
